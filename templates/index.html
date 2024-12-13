@@ -72,6 +72,18 @@
             font-size: 16px;
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #005fa3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
         }
 
         footer {
@@ -101,6 +113,7 @@
             <label for="destination">Destination:</label>
             <input type="text" id="destination" placeholder="Enter destination address">
             <button id="findRoute">Find Route</button>
+            <button id="startJourney" disabled>Start Journey</button>
         </div>
 
         <div class="card">
@@ -124,6 +137,9 @@
         let map;
         let directionsService;
         let directionsRenderer;
+        let routeSteps = [];
+        let currentStepIndex = 0;
+        let journeyInterval;
 
         function initMap() {
             // Initialize Google Maps
@@ -159,6 +175,9 @@
                         directionsRenderer.setDirections(result);
 
                         const route = result.routes[0];
+                        routeSteps = route.legs[0].steps;
+                        document.getElementById("startJourney").disabled = false;
+
                         const distance = route.legs[0].distance.text;
                         const duration = route.legs[0].duration.text;
 
@@ -168,6 +187,34 @@
                     }
                 }
             );
+        }
+
+        function startJourney() {
+            if (!routeSteps || routeSteps.length === 0) {
+                alert("No route found to start the journey.");
+                return;
+            }
+
+            currentStepIndex = 0;
+
+            journeyInterval = setInterval(() => {
+                if (currentStepIndex < routeSteps.length) {
+                    const step = routeSteps[currentStepIndex];
+                    map.panTo(step.start_location);
+                    map.setZoom(15);
+
+                    const marker = new google.maps.Marker({
+                        position: step.start_location,
+                        map: map,
+                        title: `Step ${currentStepIndex + 1}`,
+                    });
+
+                    currentStepIndex++;
+                } else {
+                    clearInterval(journeyInterval);
+                    alert("Journey completed!");
+                }
+            }, 2000); // Navigate to the next step every 2 seconds
         }
 
         async function findCoordinates() {
@@ -191,6 +238,7 @@
         }
 
         document.getElementById("findRoute").addEventListener("click", findRoute);
+        document.getElementById("startJourney").addEventListener("click", startJourney);
         document.getElementById("findCoordinates").addEventListener("click", findCoordinates);
 
         // Initialize the map
